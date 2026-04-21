@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+import sys
+import os
+import ssh_conf
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+def show_host(prefix=None):
+    for i in range(0, len(ssh_conf._HOST)):
+        desc = ssh_conf._HOST[i].get('desc','')
+        print( '[%s% 2s %s] => %-20s%s%-20s%s' % (bcolors.WARNING,i,bcolors.ENDC, ssh_conf._HOST[i]['host'],bcolors.FAIL,desc,bcolors.ENDC))
+    try:
+        index = int(input("Please select the host index to login:"))
+    except KeyboardInterrupt:
+        print("\nCtrl+C pressed...")
+        sys.exit(1)
+    except NameError as e:
+        print("NameError: ", e)
+        sys.exit(1)
+#print 'selected:%s' % _HOST[index]['host']
+    return ssh_conf._HOST[index]
+
+
+def main():
+    host=''
+    user=''
+    pwd=''
+    port=''
+    if len(sys.argv)==2:
+        host=sys.argv[1]
+        user='userxxx'
+        pwd=ssh_conf._PWD[1]
+    else:
+        host = show_host()
+        user = host.get('user','root')
+        pwd=ssh_conf._PWD[host['pwd']]
+        port = host.get('port','22')
+        host=host['host']
+    #print('%s,%s,%s,%s' % (host,user,pwd,port))
+    os.system('login.sh %s@%s %s -p%s' % (user,host,pwd,port))
+
+
+if __name__ == '__main__':
+    main()
+
