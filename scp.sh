@@ -4,8 +4,9 @@ set TARGET_HOST "[lindex $argv 0]"
 set TARGET_PASSWD "[lindex $argv 1]"
 set LOCAL_FILE "[lindex $argv 2]"
 set REMOTE_PATH "[lindex $argv 3]"
+set TARGET_PORT "[lindex $argv 4]"
 
-spawn scp ${LOCAL_FILE} ${TARGET_HOST}:${REMOTE_PATH} 
+spawn scp -P ${TARGET_PORT} ${LOCAL_FILE} ${TARGET_HOST}:${REMOTE_PATH} 
 expect {
     "*(yes/no)?" {send "yes\r"; exp_continue}
     "*password:" {send "${TARGET_PASSWD}\r"}

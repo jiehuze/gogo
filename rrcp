@@ -1,7 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import sys
 import os
+import time
+import subprocess
 import ssh_conf
+
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -12,33 +15,71 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
-def show_host(prefix=None):
+
+def show_host():
+    print(f"{bcolors.BOLD}Available hosts:{bcolors.ENDC}")
     for i in range(0, len(ssh_conf._HOST)):
-        desc = ssh_conf._HOST[i].get('desc','')
-        print '[%s%2s %s] => %-20s%s%-20s%s' % (bcolors.WARNING,i,bcolors.ENDC, ssh_conf._HOST[i]['host'],bcolors.FAIL,desc,bcolors.ENDC)
+        desc = ssh_conf._HOST[i].get('desc', '')
+        host = ssh_conf._HOST[i]['host']
+        print(f"[{bcolors.WARNING}{i:2d}{bcolors.ENDC}] => {bcolors.OKBLUE}{host:20s}{bcolors.ENDC} {bcolors.FAIL}{desc:20s}{bcolors.ENDC}")
     try:
-        index = input("Please select the host index to login:")
+        index = int(input("\nPlease select the host index: "))
     except KeyboardInterrupt:
-        print "\nCtrl+C pressed..."
+        print("\n\nCtrl+C pressed...")
         sys.exit(1)
-    except NameError as e:
-        print "NameError: ", e
+    except ValueError:
+        print("Invalid input, please enter a number.")
         sys.exit(1)
-#print 'selected:%s' % _HOST[index]['host']
-    return ssh_conf._HOST[index]
+
+    if index < 0 or index >= len(ssh_conf._HOST):
+        print(f"Index out of range. Valid range: 0 - {len(ssh_conf._HOST) - 1}")
+        sys.exit(1)
+
+    selected = ssh_conf._HOST[index]
+    print(f"\nSelected: {bcolors.OKGREEN}{selected['host']}{bcolors.ENDC} ({selected.get('desc', '')})")
+    return selected
+
+
+def print_usage():
+    print(f"Usage: {sys.argv[0]} <local_file> <remote_path>")
+    print("  local_file   : path to the local file to transfer")
+    print("  remote_path  : destination path on the remote host")
+    sys.exit(1)
 
 
 def main():
+    if len(sys.argv) == 2 and sys.argv[1] in ('-h', '--help'):
+        print_usage()
 
-    if len(sys.argv)!=3:
-        print("Usage: rcp <local_file> <remote_path>")
-        return
+    if len(sys.argv) != 3:
+        print_usage()
+
+    local_file = sys.argv[1]
+    remote_path = sys.argv[2]
+
+    if not os.path.exists(local_file):
+        print(f"Error: local file '{local_file}' does not exist.")
+        sys.exit(1)
+
     host = show_host()
-    user = host.get('user','root')
+    user = host.get('user', 'root')
     pwd = ssh_conf._PWD[host['pwd']]
-    host = host['host']
-#print('scp.sh %s@%s %s %s %s' % (user,host,pwd,sys.argv[1],sys.argv[2]))
-    os.system('scp.sh %s@%s %s %s %s' % (user,host,pwd,sys.argv[1],sys.argv[2]))
+    host_addr = host['host']
+    port = host.get('port', '22')
+
+    cmd = 'scp.sh %s@%s %s %s %s %s' % (user, host_addr, pwd, local_file, remote_path, port)
+
+    for attempt in range(1, 4):
+        ret = subprocess.call(cmd, shell=True)
+        if ret == 0:
+            break
+        print(f"{bcolors.WARNING}Transfer failed (attempt {attempt}/3), retrying...{bcolors.ENDC}")
+        if attempt < 3:
+            time.sleep(2)
+    else:
+        print(f"{bcolors.FAIL}Transfer failed after 3 attempts.{bcolors.ENDC}")
+        sys.exit(1)
+
 
 if __name__ == '__main__':
     main()
